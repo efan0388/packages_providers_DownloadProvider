@@ -35,7 +35,6 @@ import android.os.SystemClock;
 import android.provider.Downloads;
 import android.text.TextUtils;
 import android.text.format.DateUtils;
-import android.text.format.Formatter;
 import android.util.Log;
 import android.util.LongSparseLongArray;
 
@@ -206,7 +205,6 @@ public class DownloadNotifier {
             // Calculate and show progress
             String remainingText = null;
             String percentText = null;
-            String speedAsSizeText = null;
             if (type == TYPE_ACTIVE) {
                 long current = 0;
                 long total = 0;
@@ -227,26 +225,8 @@ public class DownloadNotifier {
 
                     if (speed > 0) {
                         final long remainingMillis = ((total - current) * 1000) / speed;
-                        final int duration, durationResId;
-
-                        // This duplicates DateUtils.formatDuration(), but uses our
-                        // abbreviated plurals.
-                        if (remainingMillis >= DateUtils.HOUR_IN_MILLIS) {
-                            duration = (int) ((remainingMillis + 1800000)
-                                    / DateUtils.HOUR_IN_MILLIS);
-                            durationResId = R.plurals.duration_hours;
-                        } else if (remainingMillis >= DateUtils.MINUTE_IN_MILLIS) {
-                            duration = (int) ((remainingMillis + 30000)
-                                    / DateUtils.MINUTE_IN_MILLIS);
-                            durationResId = R.plurals.duration_minutes;
-                        } else {
-                            duration = (int) ((remainingMillis + 500)
-                                    / DateUtils.SECOND_IN_MILLIS);
-                            durationResId = R.plurals.duration_seconds;
-                        }
                         remainingText = res.getString(R.string.download_remaining,
-                                res.getQuantityString(durationResId, duration, duration));
-                        speedAsSizeText = Formatter.formatFileSize(mContext, speed);
+                                DateUtils.formatDuration(remainingMillis));
                     }
 
                     final int percent = (int) ((current * 100) / total);
@@ -264,9 +244,10 @@ public class DownloadNotifier {
                 builder.setContentTitle(getDownloadTitle(res, info));
 
                 if (type == TYPE_ACTIVE) {
-                    if (speedAsSizeText != null) {
-                        builder.setContentText(res.getString(R.string.download_speed_text,
-                                remainingText, speedAsSizeText));
+                    if (!TextUtils.isEmpty(info.mDescription)) {
+                        builder.setContentText(info.mDescription);
+                    } else {
+                        builder.setContentText(remainingText);
                     }
                     builder.setContentInfo(percentText);
 
@@ -296,8 +277,7 @@ public class DownloadNotifier {
                     builder.setContentTitle(res.getQuantityString(
                             R.plurals.notif_summary_active, cluster.size(), cluster.size()));
                     builder.setContentText(remainingText);
-                    builder.setContentInfo(res.getString(R.string.download_speed_text,
-                                percentText, speedAsSizeText));
+                    builder.setContentInfo(percentText);
                     inboxStyle.setSummaryText(remainingText);
 
                 } else if (type == TYPE_WAITING) {
